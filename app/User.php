@@ -46,4 +46,67 @@ class User extends Model implements AuthenticatableContract,
     {
         return $this->hasMany(Micropost::class);
     }
+
+    // User がフォローしている User 達を取得する
+    public function followings()
+    {
+        return $this->belongsToMany(User::class, 'user_follow', 'user_id', 'follow_id')->withTimestamps();
+    }
+
+    //  User をフォローしている User 達を取得する
+    public function followers()
+    {
+        return $this->belongsToMany(User::class, 'user_follow', 'follow_id', 'user_id')->withTimestamps();
+    }
+
+    /**
+     * @param $userId
+     * @return bool
+     */
+    public function follow($userId)
+    {
+        // 既にフォローしているかの確認
+        $exist = $this->is_following($userId);
+        // 自分自身ではないかの確認
+        $its_me = $this->id == $userId;
+
+        if ($exist || $its_me) {
+            // 既にフォローしていれば何もしない
+            return false;
+        } else {
+            // 未フォローであればフォローする
+            $this->followings()->attach($userId);
+            return true;
+
+        }
+    }
+
+    /**
+     * @param $userId
+     * @return bool
+     */
+    public function unfollow($userId)
+    {
+        // 既にフォローしているかの確認
+        $exist = $this->is_following($userId);
+        // 自分自身ではないかの確認
+        $its_me = $this->id == $userId;
+
+        if ($exist && !$its_me) {
+            // 既にフォローしていればフォローを外す
+            $this->followings()->detach($userId);
+            return true;
+        } else {
+            // 未フォローであれば何もしない
+            return false;
+        }
+    }
+
+    /**
+     * @param $userId
+     * @return mixed
+     */
+    public function is_following($userId) {
+        return $this->followings()->where('follow_id', $userId)->exists();
+    }
 }
